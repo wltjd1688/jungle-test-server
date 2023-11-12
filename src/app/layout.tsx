@@ -1,5 +1,7 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
+import Link from 'next/link'
+import { useState } from 'react'
 import './globals.css'
 
 const inter = Inter({ subsets: ['latin'] })
@@ -14,9 +16,26 @@ export default function RootLayout({
 }: {
   children: React.ReactNode
 }) {
+
   return (
     <html lang="en">
-      <body className={inter.className}>{children}</body>
+      <body className={inter.className}>
+        <nav className='navBar'>
+          <div className='navLeft'>
+            <span><Link href={'/'}>지금 세계는</Link></span>
+            <span>소개</span>
+            <span>공유</span>
+            <span><Link href={'/live'}>실시간</Link></span>
+            <span><Link href={'/'}>아카이브</Link></span>
+          </div>
+          <div className='navRight'>
+            <span>language</span>
+            <span><Link href={'/signin'}>로그인</Link></span>
+            <span><Link href={'/signup'}>회원가입</Link></span>
+          </div>
+        </nav>
+        {children}
+        </body>
     </html>
   )
 }
