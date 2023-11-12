@@ -7,7 +7,7 @@ import { Vector3 } from 'three';
 
 
 const Light = () => {
-  const lightRef = useRef();
+  const lightRef = useRef<THREE.SpotLight | null>(null);
   const {camera} = useThree();
 
   useFrame(() => {
@@ -23,7 +23,7 @@ const Light = () => {
 const Earth = () => {
   const model = useGLTF('/earth/scene.gltf')
 
-  const earthRef = useRef(null);
+  const earthRef = useRef<THREE.Object3D | null>(null);
 
   useFrame(({clock})=>{
     if(earthRef.current){
@@ -33,8 +33,8 @@ const Earth = () => {
   });
 
   return (
-    <mesh ref={earthRef}>
-      <primitive object={model.scene} scale={0.0005} />
+    <mesh>
+      <primitive ref={earthRef} object={model.scene} scale={0.0005} />
     </mesh>
   );
 };
