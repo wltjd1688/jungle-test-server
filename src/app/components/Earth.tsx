@@ -39,7 +39,7 @@ const Earth = () => {
   );
 };
 
-export const ChatBorCanvas = () => {
+export const EarthCanvas = () => {
   return (
     <Canvas>
       <OrbitControls

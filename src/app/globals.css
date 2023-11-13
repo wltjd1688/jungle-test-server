@@ -4,4 +4,46 @@
 
 :root {
   background-color: black;
+  color: white;
+}
+
+ul li{
+  display:inline-block;
+  padding-left: 0.5rem
+}
+
+.slider-container {
+  position: relative;
+  width: 400px;
+  height: 50px;
+}
+
+.slider-title {
+  display: flex;
+  justify-content: space-between;
+  appearance: none;
+  width: 400px;
+  height: 30px;
+  padding: 0 15px;
+  border-radius: 12px;
+  outline: none;
+}
+
+.slider {
+  appearance: none;
+  width: 400px;
+  height: 25px;
+  border-radius: 12px;  
+  background: #d3d3d3;
+  outline: none;
+}
+
+.slider::-webkit-slider-thumb {
+  appearance: none;
+  width: 60px;
+  height: 30px;
+  border-radius: 12px; 
+  background: red;
+  cursor: pointer;
+  opacity: 80%;
 }
