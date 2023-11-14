@@ -2,8 +2,7 @@
 import { OrbitControls, useAnimations, useGLTF, Stars} from '@react-three/drei';
 import { Canvas, useFrame, useLoader, useThree } from '@react-three/fiber'
 import React, { useEffect, useRef } from 'react'
-import { GLTFLoader }from 'three/examples/jsm/loaders/GLTFLoader.js';
-import { Vector3 } from 'three';
+import { TextureLoader } from 'three';
 
 const Light = () => {
 
@@ -15,14 +14,13 @@ const Light = () => {
 }
 const Earth = () => {
   const model = useGLTF('/earth/scene.gltf')
-  
   const earthRef = useRef<THREE.Object3D | null>(null);
+  const cloudRef = useRef<THREE.Object3D | null>(null!);
+  const cloud = useLoader(TextureLoader, '/earth/textures/cloud.png');
 
-  useFrame(({clock})=>{
-    if(earthRef.current){
-      earthRef.current.rotation.x = -0.04;
-      earthRef.current.rotation.y = clock.getElapsedTime()*0.08;
-      earthRef.current.rotation.z = clock.getElapsedTime()*0.02;
+  useFrame(({clock}) => {
+    if (cloudRef.current) {
+      cloudRef.current.rotation.y = clock.getElapsedTime() * 0.01;
     }
   });
 
@@ -31,9 +29,9 @@ const Earth = () => {
       <mesh receiveShadow castShadow>
         <primitive ref={earthRef} object={model.scene} scale={0.0005} />
       </mesh>
-      <mesh>
-        <sphereGeometry args={[model.scene.scale.x*4320, 32, 32]}/>
-        <meshBasicMaterial color='blue' transparent opacity={0.1}/>
+      <mesh ref={cloudRef} receiveShadow castShadow>
+        <sphereGeometry args={[model.scene.scale.x*4330, 32, 32]}/>
+        <meshPhongMaterial map={cloud} transparent color='skyblue' />
       </mesh>
     </>
   );
