@@ -7,7 +7,7 @@ import * as THREE from 'three';
 
 const Light = () => {
   const spotLightRef = useRef<THREE.SpotLight | null>(null);
-  const dierctLightRef = useRef<THREE.directionalLight | null>(null);
+  const dierctLightRef = useRef<THREE.DirectionalLight | null>(null);
   const { camera } = useThree();
   const planetPosition = new THREE.Vector3(); // 행성의 위치를 저장할 변수
 
@@ -35,14 +35,18 @@ const Light = () => {
   useFrame(() => {
     if (dierctLightRef.current) {
       // 조명이 카메라를 따라가면서 상대적으로 왼쪽 대각선 위에 위치하도록 설정
-      dierctLightRef.current.position.copy(camera.position);
+      const offset = new THREE.Vector3(); // 오프셋 설정
+      dierctLightRef.current.position.copy(camera.position).add(offset);
+      // 조명이 행성을 항상 비추도록 설정
+      dierctLightRef.current.target.position.copy(planetPosition);
+      dierctLightRef.current.target.updateMatrixWorld();
     }
   });
   
   return (
     <mesh>
       <SpotLight ref={spotLightRef} color='#00BFFF' angle={Math.PI/2.2}/>
-      <directionalLight ref={dierctLightRef} intensity={60} castShadow />
+      <directionalLight ref={dierctLightRef} intensity={50} castShadow />
     </mesh>
   );
 }
@@ -60,9 +64,9 @@ const Atmosphere = () => {
 
   return(
     <mesh receiveShadow castShadow>
-        <ambientLight intensity={1}/>
-        <sphereGeometry args={[2.17, 32, 32]}/>
-        <meshPhongMaterial color='white' opacity={1} transparent={true} side={THREE.BackSide}/>
+        <ambientLight intensity={100}/>
+        <sphereGeometry args={[2.17, 64, 64]}/>
+        <meshPhongMaterial color='white' opacity={1} transparent side={THREE.BackSide}/>
     </mesh>
   )
 }
@@ -73,7 +77,7 @@ const Cloud = () => {
 
   useFrame(({clock}) => {
     if (cloudRef.current) {
-      cloudRef.current.rotation.y = clock.getElapsedTime() * 0.005;
+      cloudRef.current.rotation.y = clock.getElapsedTime() * 0.008;
     }
   });
 
@@ -85,13 +89,14 @@ const Cloud = () => {
   )};
 
 export const EarthCanvas = () => {
+  const localCanvas = useRef<HTMLCanvasElement>(null!);
   return (
     <Canvas>
       <OrbitControls
         enablePan={false}
         minPolarAngle={0.5}
         maxPolarAngle={2}
-        minDistance={3}
+        minDistance={2}
         maxDistance={5}
       />
       <Light />
