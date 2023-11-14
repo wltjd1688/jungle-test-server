@@ -2,7 +2,7 @@
 import { OrbitControls, useAnimations, useGLTF, Stars} from '@react-three/drei';
 import { Canvas, useFrame, useLoader, useThree } from '@react-three/fiber'
 import React, { useEffect, useRef } from 'react'
-import { TextureLoader } from 'three';
+import * as THREE from 'three';
 
 const Light = () => {
 
@@ -15,8 +15,8 @@ const Light = () => {
 const Earth = () => {
   const model = useGLTF('/earth/scene.gltf')
   const earthRef = useRef<THREE.Object3D | null>(null);
-  const cloudRef = useRef<THREE.Object3D | null>(null!);
-  const cloud = useLoader(TextureLoader, '/earth/textures/cloud.png');
+  const cloudRef = useRef<THREE.Mesh | null>(null!);
+  const cloud = useLoader(THREE.TextureLoader, '/earth/textures/cloud.png');
 
   useFrame(({clock}) => {
     if (cloudRef.current) {
