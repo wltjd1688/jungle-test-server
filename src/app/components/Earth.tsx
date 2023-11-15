@@ -2,7 +2,8 @@
 import { OrbitControls, useAnimations, useGLTF, Stars, SpotLight} from '@react-three/drei';
 import { Canvas, useFrame, useLoader, useThree } from '@react-three/fiber'
 import { backIn } from 'framer';
-import React, { useEffect, useRef } from 'react'
+import { userAgent } from 'next/server';
+import React, { useEffect, useRef, useState } from 'react'
 import * as THREE from 'three';
 
 const Light = () => {
@@ -50,11 +51,67 @@ const Light = () => {
     </mesh>
   );
 }
+
+const latLongToVector3 = (lat:any,lon:any,radius:any) => {
+  const phi = ((lat+ 0.25) * Math.PI) / 180;
+  const theta = (((lon-90) - 180) * Math.PI) / 180;
+  const x = -(radius * Math.cos(phi) * Math.cos(theta));
+  const y = radius * Math.sin(phi);
+  const z = radius * Math.cos(phi) * Math.sin(theta);
+  return new THREE.Vector3(x,y,z);
+}
+
+interface PinProps {
+  lat: number;
+  lon: number;
+  radius: number;
+}
+
+const Pin: React.FC<PinProps> = (props) => {
+  const pinRef = useRef<THREE.Sprite>(null!);
+  const destinationIcon = useLoader(THREE.TextureLoader, '/destination.png');
+  const { camera } = useThree();
+
+  useEffect(() => {
+    // props.radius에 대한 타입 검사를 추가합니다.
+    if (typeof props.radius === 'number') {
+      const position = latLongToVector3(props.lat, props.lon, props.radius);
+      const lineEnd = position.clone().multiplyScalar(1.1);
+
+      if (pinRef.current) {
+        pinRef.current.position.copy(position);
+      }
+    }
+  }, [props.lat, props.lon, props.radius]);
+
+  useFrame(() => {
+    if (pinRef.current) {
+      const distance = pinRef.current.position.distanceTo(camera.position);
+      const scale = Math.max(0.05,Math.log(distance))/3; // 거리가 증가할수록 스케일 감소
+      pinRef.current.scale.set(scale, scale*1.5, scale);
+    }
+  });  
+
+  return (
+    <sprite ref={pinRef} renderOrder={1}>
+      <spriteMaterial attach='material' map={destinationIcon} color={'red'}/>
+    </sprite>
+  );
+}
 const Earth = () => {
-  const model = useGLTF('/earth/scene.gltf')
+  const model = useGLTF('/earth/scene.gltf');
+  const camera = useThree((state) => state.camera);
+  const [radius, setRadius] = useState(2.14);
+
+  useFrame(() => {
+    const dis = Math.sqrt(Math.pow(camera.position.x,2) + Math.pow(camera.position.y,2) + Math.pow(camera.position.z,2));
+    const newRadius = 2.13 + (0.03 * dis);
+    setRadius(newRadius);
+  });
 
   return (
     <mesh receiveShadow castShadow>
+        <Pin lat={37.5} lon={127.5} radius={radius}/>
         <primitive object={model.scene} scale={0.0005} />
     </mesh>
   );
@@ -64,9 +121,9 @@ const Atmosphere = () => {
 
   return(
     <mesh receiveShadow castShadow>
-        <ambientLight intensity={100}/>
-        <sphereGeometry args={[2.17, 64, 64]}/>
-        <meshPhongMaterial color='white' opacity={1} transparent side={THREE.BackSide}/>
+        <ambientLight intensity={10}/>
+        <sphereGeometry args={[2.16, 64, 64]}/>
+        <meshPhongMaterial color='skyblue' opacity={1} transparent side={THREE.BackSide}/>
     </mesh>
   )
 }
@@ -82,8 +139,8 @@ const Cloud = () => {
   });
 
   return(
-    <mesh ref={cloudRef} receiveShadow castShadow>
-        <sphereGeometry args={[2.16, 32, 32]}/>
+    <mesh ref={cloudRef} renderOrder={0} receiveShadow castShadow>
+        <sphereGeometry args={[2.14, 32, 32]}/>
         <meshPhongMaterial map={cloud} transparent opacity={0.9}/>
     </mesh>
   )};
@@ -93,7 +150,6 @@ export const EarthCanvas = () => {
   return (
     <Canvas>
       <OrbitControls
-        enablePan={false}
         minPolarAngle={0.5}
         maxPolarAngle={2}
         minDistance={2}
