@@ -4,7 +4,7 @@ import axios from 'axios';
 
 async function singup(id:string, password:string) {
   try{
-    const response = await axios.post('http://52.79.255.85:3000/auth/signup',{'username':id,'password':password});
+    const response = await axios.post('https://worldisaster.shop:3000/auth/signup',{'username':id,'password':password});
     console.log('회원가입 성공',response);
   } catch (error) {
     console.log('회원가입 실패',error);

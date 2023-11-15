@@ -2,13 +2,14 @@
 import { OrbitControls, useAnimations, useGLTF, Stars, SpotLight} from '@react-three/drei';
 import { Canvas, useFrame, useLoader, useThree } from '@react-three/fiber'
 import { backIn } from 'framer';
+import { link } from 'fs';
 import { userAgent } from 'next/server';
 import React, { useEffect, useRef, useState } from 'react'
 import * as THREE from 'three';
 
 const Light = () => {
-  const spotLightRef = useRef<THREE.SpotLight | null>(null);
-  const dierctLightRef = useRef<THREE.DirectionalLight | null>(null);
+  const spotLightRef = useRef<THREE.SpotLight | null>(null!);
+  const directLightRef = useRef<THREE.DirectionalLight | null>(null!);
   const { camera } = useThree();
   const planetPosition = new THREE.Vector3(); // 행성의 위치를 저장할 변수
 
@@ -34,20 +35,20 @@ const Light = () => {
   });
 
   useFrame(() => {
-    if (dierctLightRef.current) {
+    if (directLightRef.current) {
       // 조명이 카메라를 따라가면서 상대적으로 왼쪽 대각선 위에 위치하도록 설정
       const offset = new THREE.Vector3(); // 오프셋 설정
-      dierctLightRef.current.position.copy(camera.position).add(offset);
+      directLightRef.current.position.copy(camera.position).add(offset);
       // 조명이 행성을 항상 비추도록 설정
-      dierctLightRef.current.target.position.copy(planetPosition);
-      dierctLightRef.current.target.updateMatrixWorld();
+      directLightRef.current.target.position.copy(planetPosition);
+      directLightRef.current.target.updateMatrixWorld();
     }
   });
   
   return (
     <mesh>
       <SpotLight ref={spotLightRef} color='#00BFFF' angle={Math.PI/2.2}/>
-      <directionalLight ref={dierctLightRef} intensity={50} castShadow />
+      <directionalLight ref={directLightRef} intensity={50} castShadow />
     </mesh>
   );
 }
@@ -68,7 +69,7 @@ interface PinProps {
 }
 
 const Pin: React.FC<PinProps> = (props) => {
-  const pinRef = useRef<THREE.Sprite>(null!);
+  const groupRef = useRef<THREE.Group>(null!);
   const destinationIcon = useLoader(THREE.TextureLoader, '/destination.png');
   const { camera } = useThree();
 
@@ -76,26 +77,31 @@ const Pin: React.FC<PinProps> = (props) => {
     // props.radius에 대한 타입 검사를 추가합니다.
     if (typeof props.radius === 'number') {
       const position = latLongToVector3(props.lat, props.lon, props.radius);
-      const lineEnd = position.clone().multiplyScalar(1.1);
 
-      if (pinRef.current) {
-        pinRef.current.position.copy(position);
+      if (groupRef.current) {
+        groupRef.current.position.copy(position);
       }
     }
   }, [props.lat, props.lon, props.radius]);
 
   useFrame(() => {
-    if (pinRef.current) {
-      const distance = pinRef.current.position.distanceTo(camera.position);
-      const scale = Math.max(0.05,Math.log(distance))/3; // 거리가 증가할수록 스케일 감소
-      pinRef.current.scale.set(scale, scale*1.5, scale);
+    if (groupRef.current) {
+      const distance = groupRef.current.position.distanceTo(camera.position);
+      const scale = Math.max(0.02, distance*0.05); // 거리가 증가할수록 스케일 감소
+      groupRef.current.scale.set(scale, scale*1.5,1);
     }
-  });  
+  });
+
+  const handleClick = () => {
+    window.open('https://www.google.com/maps/search/?api=1&query='+props.lat+','+props.lon);
+  }
 
   return (
-    <sprite ref={pinRef} renderOrder={1}>
-      <spriteMaterial attach='material' map={destinationIcon} color={'red'}/>
-    </sprite>
+    <group ref={groupRef} renderOrder={1}>
+      <sprite position={new THREE.Vector3(0,-0.5,0)} onClick={handleClick}>
+        <spriteMaterial attach='material' map={destinationIcon} color={'red'}/>
+      </sprite>
+    </group>
   );
 }
 const Earth = () => {
@@ -105,13 +111,13 @@ const Earth = () => {
 
   useFrame(() => {
     const dis = Math.sqrt(Math.pow(camera.position.x,2) + Math.pow(camera.position.y,2) + Math.pow(camera.position.z,2));
-    const newRadius = 2.13 + (0.03 * dis);
+    const newRadius = 2.17 + dis/1000;
     setRadius(newRadius);
   });
 
   return (
     <mesh receiveShadow castShadow>
-        <Pin lat={37.5} lon={127.5} radius={radius}/>
+        <Pin lat={37.5518911} lon={126.9917937} radius={radius}/>
         <primitive object={model.scene} scale={0.0005} />
     </mesh>
   );
@@ -150,10 +156,13 @@ export const EarthCanvas = () => {
   return (
     <Canvas>
       <OrbitControls
+        // enableZoom={false}
+        enablePan={false}
         minPolarAngle={0.5}
         maxPolarAngle={2}
-        minDistance={2}
-        maxDistance={5}
+        
+        // minDistance={2}
+        // maxDistance={5}
       />
       <Light />
       <Stars 
