@@ -256,7 +256,7 @@ export const EarthCanvas = () => {
           )
         })}
       </Canvas>
-      <button onClick={()=>{console.log(3)} className=' bg-white fixed left-3 top-20 shadow-2xl border-solid border-2 border-black rounded-full'>
+      <button className=' bg-white fixed left-3 top-20 shadow-2xl border-solid border-2 border-black rounded-full'>
         <Image src={SyncImage} alt='sync' width={30} height={30}/>
       </button>
     </>
