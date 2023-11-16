@@ -1,11 +1,9 @@
 "use client";
-import { OrbitControls, useAnimations, useGLTF, Stars, SpotLight} from '@react-three/drei';
+import { OrbitControls, useAnimations, useGLTF, Stars, SpotLight, Plane} from '@react-three/drei';
 import { Canvas, useFrame, useLoader, useThree } from '@react-three/fiber'
-import { backIn } from 'framer';
-import { link } from 'fs';
-import { userAgent } from 'next/server';
 import React, { useEffect, useRef, useState } from 'react'
 import * as THREE from 'three';
+import { gsap } from 'gsap';
 
 const Light = () => {
   const spotLightRef = useRef<THREE.SpotLight | null>(null!);
@@ -14,9 +12,10 @@ const Light = () => {
   const planetPosition = new THREE.Vector3(); // 행성의 위치를 저장할 변수
 
   useFrame(() => {
-    if (spotLightRef.current) {
+    if (spotLightRef.current && directLightRef.current) {
       // 카메라와 행성 사이의 거리 계산
       const distanceToPlanet = camera.position.distanceTo(planetPosition);
+      directLightRef.current.target.position.copy(new THREE.Vector3(0,0,0));
   
       // 스포트라이트의 X축 위치 계산
       const spotlightX = camera.position.x / distanceToPlanet;
@@ -27,33 +26,23 @@ const Light = () => {
       spotLightRef.current.position.x = spotlightX;
       spotLightRef.current.position.y = spotlightY;
       spotLightRef.current.position.z = spotlightZ;
-  
+      
+      
+      directLightRef.current.position.copy(new THREE.Vector3(camera.position.x+2, camera.position.y+2, camera.position.z));
       // 스포트라이트가 행성을 향하도록 설정 (필요한 경우)
       spotLightRef.current.target.position.copy(planetPosition);
-      spotLightRef.current.target.updateMatrixWorld();
-    }
-  });
-
-  useFrame(() => {
-    if (directLightRef.current) {
-      // 조명이 카메라를 따라가면서 상대적으로 왼쪽 대각선 위에 위치하도록 설정
-      const offset = new THREE.Vector3(); // 오프셋 설정
-      directLightRef.current.position.copy(camera.position).add(offset);
-      // 조명이 행성을 항상 비추도록 설정
-      directLightRef.current.target.position.copy(planetPosition);
-      directLightRef.current.target.updateMatrixWorld();
     }
   });
   
   return (
     <mesh>
       <SpotLight ref={spotLightRef} color='#00BFFF' angle={Math.PI/2.2}/>
-      <directionalLight ref={directLightRef} intensity={50} castShadow />
+      <directionalLight ref={directLightRef} intensity={90} castShadow />
     </mesh>
   );
 }
 
-const latLongToVector3 = (lat:any,lon:any,radius:any) => {
+const EarthlatLongToVector3 = (lat:any,lon:any,radius:any) => {
   const phi = ((lat+ 0.25) * Math.PI) / 180;
   const theta = (((lon-90) - 180) * Math.PI) / 180;
   const x = -(radius * Math.cos(phi) * Math.cos(theta));
@@ -70,55 +59,124 @@ interface PinProps {
 
 const Pin: React.FC<PinProps> = (props) => {
   const groupRef = useRef<THREE.Group>(null!);
-  const destinationIcon = useLoader(THREE.TextureLoader, '/destination.png');
+  const meshRef = useRef<THREE.Mesh>(null!);
+  const sphereRef = useRef<THREE.Mesh>(null!);
+  const plateRef = useRef<THREE.Mesh>(null!);
   const { camera } = useThree();
 
   useEffect(() => {
-    // props.radius에 대한 타입 검사를 추가합니다.
     if (typeof props.radius === 'number') {
-      const position = latLongToVector3(props.lat, props.lon, props.radius);
-
+      const position = EarthlatLongToVector3(props.lat, props.lon, props.radius);
       if (groupRef.current) {
         groupRef.current.position.copy(position);
+        groupRef.current.lookAt(new THREE.Vector3(0,0,0));
+      }
+      if (meshRef.current) {
+        meshRef.current.rotation.x = 0.2;
+        meshRef.current.rotation.y = 1.54;
+        meshRef.current.rotation.z = 1.38; 
+      }
+      if (sphereRef.current) {
+        sphereRef.current.position.x = 0;
+        sphereRef.current.position.y = 0;
+        sphereRef.current.position.z = -0.12; 
       }
     }
   }, [props.lat, props.lon, props.radius]);
 
-  useFrame(() => {
-    if (groupRef.current) {
-      const distance = groupRef.current.position.distanceTo(camera.position);
-      const scale = Math.max(0.02, distance*0.05); // 거리가 증가할수록 스케일 감소
-      groupRef.current.scale.set(scale, scale*1.5,1);
+  useEffect(() => {
+    if (plateRef.current) {
+      plateRef.current.rotation.x = 3.14;
     }
-  });
+  })
 
-  const handleClick = () => {
-    window.open('https://www.google.com/maps/search/?api=1&query='+props.lat+','+props.lon);
+  const onPinClick = () => {
+    zoomInToLocation(props.lat, props.lon);
   }
 
+  const zoomInToLocation = (lat:any, lon:any) => {
+    // 클릭한 지점으로 이동할 카메라 위치 계산
+    const intermediatePosition = EarthlatLongToVector3(lat, lon, 5); // 예시 값, 지구 표면에서 높은 위치
+  
+    // 최종 목적지 위치 계산
+    const finalPosition = EarthlatLongToVector3(lat, lon, 2.3); // 지구 표면에서 약간 떨어진 위치
+  
+    // 클릭한 지점으로 빠르게 이동
+    gsap.to(camera.position, {
+      x: intermediatePosition.x,
+      y: intermediatePosition.y,
+      z: intermediatePosition.z,
+      duration: 0.6, // 빠른 이동
+      ease: "power2.inOut",
+      onUpdate: () => camera.lookAt(new THREE.Vector3(0, 0, 0)),
+      onComplete: () => {
+        // 천천히 최종 목적지로 줌인
+        gsap.to(camera.position, {
+          x: finalPosition.x,
+          y: finalPosition.y,
+          z: finalPosition.z,
+          duration: 1.5, // 천천히 이동
+          ease: "power2.inOut",
+          onUpdate: () => camera.lookAt(new THREE.Vector3(0, 0, 0)),
+          onComplete: () => {
+            // // 지구를 서서히 사라지게 만들기
+            // gsap.to(scene.rotation, {
+            //   y: Math.PI * 2,
+            //   duration: 1.5,
+            //   ease: "power2.inOut",
+            //   onComplete: () => {
+            //     // 2D 지도로 이동
+            //     window.location.href = `https://www.example.com/${lat},${lon}`;
+            //   }
+            // });
+          }
+        });
+      }
+    });
+  };
+
   return (
-    <group ref={groupRef} renderOrder={1}>
-      <sprite position={new THREE.Vector3(0,-0.5,0)} onClick={handleClick}>
-        <spriteMaterial attach='material' map={destinationIcon} color={'red'}/>
-      </sprite>
+    <group ref={groupRef}>
+      {/* 몸통 */}
+      <mesh ref={meshRef} onClick={onPinClick}>
+        <coneGeometry args={[0.05, 0.15]} />
+        <meshBasicMaterial color="red" />       
+      </mesh>
+      {/* 머리 */}
+      <mesh ref={sphereRef}>
+        <sphereGeometry args={[0.04]}/>
+        <meshBasicMaterial color="blue" />
+      </mesh>
     </group>
   );
-}
+};
+
+
 const Earth = () => {
   const model = useGLTF('/earth/scene.gltf');
   const camera = useThree((state) => state.camera);
   const [radius, setRadius] = useState(2.14);
-
-  useFrame(() => {
-    const dis = Math.sqrt(Math.pow(camera.position.x,2) + Math.pow(camera.position.y,2) + Math.pow(camera.position.z,2));
-    const newRadius = 2.17 + dis/1000;
-    setRadius(newRadius);
-  });
+  const { scene } = useThree();
 
   return (
     <mesh receiveShadow castShadow>
-        <Pin lat={37.5518911} lon={126.9917937} radius={radius}/>
         <primitive object={model.scene} scale={0.0005} />
+        {/* <shaderMaterial vertexShader='
+        varying vec3 vertexNormal;
+        
+        void main() {
+          vertexNormal = normalize(normalMatrix * normal);
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }'
+        fragmentShader='
+        varying vec3 vertexNormal;
+        void main() {
+          float intensity = pow(0.5 - dot(vertexNormal, vec3(0, 0, 1.0)), 0.5);
+          gl_EragColor = vec4(0.3, 0.6, 1.0, 1) * intensity;
+        }'
+        transparent
+        blending={THREE.AdditiveBlending}
+        side={THREE.BackSide}/> */}
     </mesh>
   );
 };
@@ -152,29 +210,35 @@ const Cloud = () => {
   )};
 
 export const EarthCanvas = () => {
-  const localCanvas = useRef<HTMLCanvasElement>(null!);
+  
   return (
-    <Canvas>
-      <OrbitControls
-        // enableZoom={false}
-        enablePan={false}
-        minPolarAngle={0.5}
-        maxPolarAngle={2}
-        
-        // minDistance={2}
-        // maxDistance={5}
-      />
-      <Light />
-      <Stars 
-      radius={300} 
-      depth={60} 
-      count={20000} 
-      factor={7} 
-      saturation={0}
-      fade={true}/>
-      <Earth />
-      <Cloud />
-      <Atmosphere /> 
-    </Canvas>
+    <>
+      <Canvas>
+        <OrbitControls
+          enableZoom={false}
+          enablePan={false}
+          minPolarAngle={0.5}
+          maxPolarAngle={2}
+        />
+        <Light />
+        <Stars 
+        radius={300} 
+        depth={60} 
+        count={20000} 
+        factor={7} 
+        saturation={0}
+        fade={true}/>
+        <Earth />
+        <Cloud />
+        <Atmosphere /> 
+        <Pin lat={37.5518911} lon={126.9917937} radius={2.2}/>
+        <Pin lat={25.451233} lon={28.111223} radius={2.2}/>
+        <Pin lat={0} lon={35} radius={2.2}/>
+      </Canvas>
+      <button src="">
+      </button>
+    </>
   )
 }
+
+export default EarthCanvas;

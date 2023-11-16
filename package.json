@@ -14,7 +14,10 @@
     "@react-three/postprocessing": "^2.15.11",
     "axios": "^1.6.2",
     "cobe": "^0.6.3",
+    "cors": "^2.8.5",
     "framer": "^2.4.1",
+    "gasp": "^0.0.2",
+    "gsap": "^3.12.2",
     "next": "14.0.2",
     "react": "^18",
     "react-dom": "^18"

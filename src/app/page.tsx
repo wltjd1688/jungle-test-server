@@ -2,7 +2,7 @@ import React from 'react';
 // import Link from 'next/link'
 import Image from 'next/image';
 import { Slider } from './components/Slider';
-import { EarthCanvas } from './components/Earth';
+import EarthCanvas from './components/Earth';
 
 
 export default function Home() {
