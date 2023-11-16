@@ -4,6 +4,8 @@ import { Canvas, useFrame, useLoader, useThree } from '@react-three/fiber'
 import React, { useEffect, useRef, useState } from 'react'
 import * as THREE from 'three';
 import { gsap } from 'gsap';
+import SyncImage from 'public/sync.png';
+import Image from 'next/image';
 
 const Light = () => {
   const spotLightRef = useRef<THREE.SpotLight | null>(null!);
@@ -235,7 +237,8 @@ export const EarthCanvas = () => {
         <Pin lat={25.451233} lon={28.111223} radius={2.2}/>
         <Pin lat={0} lon={35} radius={2.2}/>
       </Canvas>
-      <button src="">
+      <button className=' rounded-full bg-white fixed left-3 top-20'>
+        <Image src={SyncImage} alt='sync' width={30} height={30}/>
       </button>
     </>
   )
