@@ -4,7 +4,7 @@ import axios from 'axios';
 
 async function login(id:string, password:string) {
   try{
-    const response = await axios.post('https://worldisaster.shop:3000/auth/signin',{'username':id,'password':password});
+    const response = await axios.post('https://worldisaster.com/auth/signin',{'username':id,'password':password});
     console.log('로그인 성공',response);
   } catch (error) {
     console.log('로그인 실패',error);
