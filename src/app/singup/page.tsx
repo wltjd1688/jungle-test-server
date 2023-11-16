@@ -6,7 +6,7 @@ axios.defaults.withCredentials = true;
 async function singup(id:string, password:string) {
   try{
     const response = await axios.post(
-      'https://worldisaster.com/auth/signin',{
+      'https://worldisaster.com/auth/signup',{
       headers:{
       'Content-Type':'application/json',
       'Access-Control-Allow-Origin':'https://worldisaster.com/auth/signup',
