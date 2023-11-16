@@ -5,7 +5,14 @@ axios.defaults.withCredentials = true;
 
 async function singup(id:string, password:string) {
   try{
-    const response = await axios.post('https://worldisaster.com/auth/signup',{'username':id,'password':password});
+    const response = await axios({
+      url: 'https://worldisaster.com/auth/signup',
+      method:'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      data:{'username':id,'password':password},
+      })
     console.log('회원가입 성공',response);
   } catch (error) {
     console.log('회원가입 실패',error);
