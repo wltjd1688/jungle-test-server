@@ -7,7 +7,8 @@ import { gsap } from 'gsap';
 import SyncImage from 'public/sync.png';
 import Image from 'next/image';
 
-const dumeData = [
+
+const dummyData = [
     {
         lat: 37.5518911,
         lon: 126.9917937,
@@ -21,7 +22,7 @@ const dumeData = [
       lon: 35,
       radius: 2.2
     }
-    ]
+    ]    
 
 const Light = () => {
   const spotLightRef = useRef<THREE.SpotLight | null>(null!);
@@ -112,89 +113,73 @@ const Pin: React.FC<PinProps> = (props) => {
     zoomInToLocation(props.lat, props.lon);
   }
 
-  const zoomInToLocation = (lat:any, lon:any) => {
-    // 클릭한 지점으로 이동할 카메라 위치 계산
-    const intermediatePosition = EarthlatLongToVector3(lat, lon, 5); // 예시 값, 지구 표면에서 높은 위치
-  
-    // 최종 목적지 위치 계산
-    const finalPosition = EarthlatLongToVector3(lat, lon, 2.3); // 지구 표면에서 약간 떨어진 위치
-  
-    // 클릭한 지점으로 빠르게 이동
-    gsap.to(camera.position, {
-      x: intermediatePosition.x,
-      y: intermediatePosition.y,
-      z: intermediatePosition.z,
-      duration: 0.6, // 빠른 이동
-      ease: "power2.inOut",
-      onUpdate: () => camera.lookAt(new THREE.Vector3(0, 0, 0)),
-      onComplete: () => {
-        // 천천히 최종 목적지로 줌인
-        gsap.to(camera.position, {
-          x: finalPosition.x,
-          y: finalPosition.y,
-          z: finalPosition.z,
-          duration: 1.5, // 천천히 이동
-          ease: "power2.inOut",
-          onUpdate: () => camera.lookAt(new THREE.Vector3(0, 0, 0)),
-          onComplete: () => {
-            // // 지구를 서서히 사라지게 만들기
-            // gsap.to(scene.rotation, {
-            //   y: Math.PI * 2,
-            //   duration: 1.5,
-            //   ease: "power2.inOut",
-            //   onComplete: () => {
-            //     // 2D 지도로 이동
-            //     window.location.href = `https://www.example.com/${lat},${lon}`;
-            //   }
-            // });
-          }
-        });
+const zoomInToLocation = (lat:any, lon:any) => {
+  // 클릭한 지점으로 이동할 카메라 위치 계산
+  const intermediatePosition = EarthlatLongToVector3(lat, lon, 5); // 예시 값, 지구 표면에서 높은 위치
+  // 최종 목적지 위치 계산
+  const finalPosition = EarthlatLongToVector3(lat, lon, 2.3); // 지구 표면에서 약간 떨어진 위치
+
+
+  // 클릭한 지점으로 빠르게 이동
+  gsap.to(camera.position, {
+    x: intermediatePosition.x,
+    y: intermediatePosition.y,
+    z: intermediatePosition.z,
+    duration: 0.6, // 빠른 이동
+    ease: "power2.inOut",
+    onUpdate: () => camera.lookAt(new THREE.Vector3(0, 0, 0)),
+    onComplete: () => {
+      // 천천히 최종 목적지로 줌인
+      gsap.to(camera.position, {
+        x: finalPosition.x,
+        y: finalPosition.y,
+        z: finalPosition.z,
+        duration: 1.5, // 천천히 이동
+        ease: "power2.inOut",
+        onUpdate: () => camera.lookAt(new THREE.Vector3(0, 0, 0)),
+        onComplete: () => {
+          try{
+            window.location.href =`/earth/detail?lat=${lat}&lon=${lon}`;
+          } catch (error) {
+            console.log("이동실패", error);
+            setTimeout(() => {
+              gsap.to(camera.position, {
+                x: intermediatePosition.x,
+                y: intermediatePosition.y,
+                z: intermediatePosition.z,
+                duration: 1.5, // 천천히 이동
+              });
+          }, 1000);
+        }
       }
     });
-  };
+  }});
+};
 
-  return (
-    <group ref={groupRef}>
-      {/* 몸통 */}
-      <mesh ref={meshRef} onClick={onPinClick}>
-        <coneGeometry args={[0.05, 0.15]} />
-        <meshBasicMaterial color="red" />       
-      </mesh>
-      {/* 머리 */}
-      <mesh ref={sphereRef}>
-        <sphereGeometry args={[0.04]}/>
-        <meshBasicMaterial color="blue" />
-      </mesh>
-    </group>
-  );
+return (
+  <group ref={groupRef}>
+    {/* 몸통 */}
+    <mesh ref={meshRef} onClick={onPinClick}>
+      <coneGeometry args={[0.05, 0.15]} />
+      <meshBasicMaterial color="red" />       
+    </mesh>
+    {/* 머리 */}
+    <mesh ref={sphereRef}>
+      <sphereGeometry args={[0.04]}/>
+      <meshBasicMaterial color="blue" />
+    </mesh>
+  </group>
+);
 };
 
 
 const Earth = () => {
   const model = useGLTF('/earth/scene.gltf');
   const camera = useThree((state) => state.camera);
-  const [radius, setRadius] = useState(2.14);
-  const { scene } = useThree();
 
   return (
     <mesh receiveShadow castShadow>
         <primitive object={model.scene} scale={0.0005} />
-        {/* <shaderMaterial vertexShader='
-        varying vec3 vertexNormal;
-        
-        void main() {
-          vertexNormal = normalize(normalMatrix * normal);
-          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-        }'
-        fragmentShader='
-        varying vec3 vertexNormal;
-        void main() {
-          float intensity = pow(0.5 - dot(vertexNormal, vec3(0, 0, 1.0)), 0.5);
-          gl_EragColor = vec4(0.3, 0.6, 1.0, 1) * intensity;
-        }'
-        transparent
-        blending={THREE.AdditiveBlending}
-        side={THREE.BackSide}/> */}
     </mesh>
   );
 };
@@ -228,12 +213,13 @@ const Cloud = () => {
   )};
 
 export const EarthCanvas = () => {
-  
+  const [reasetCamera, setResetCamera] = useState(false);
+
   return (
     <>
       <Canvas>
         <OrbitControls
-          enableZoom={false}
+          enableZoom={true}
           enablePan={false}
           minPolarAngle={0.5}
           maxPolarAngle={2}
@@ -249,16 +235,13 @@ export const EarthCanvas = () => {
         <Earth />
         <Cloud />
         <Atmosphere /> 
-        {dumeData.map((data, index) => {
+        {dummyData.map((data, index) => {
           console.log(index);
           return(
             <Pin key={index} lat={data.lat} lon={data.lon} radius={data.radius}/>
           )
         })}
       </Canvas>
-      <button className=' bg-white fixed left-3 top-20 shadow-2xl border-solid border-2 border-black rounded-full'>
-        <Image src={SyncImage} alt='sync' width={30} height={30}/>
-      </button>
     </>
   )
 }
