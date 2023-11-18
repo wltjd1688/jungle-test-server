@@ -12,6 +12,11 @@ ul li{
   padding-left: 0.5rem
 }
 
+nav.with-shadow {
+  border-bottom: 1px solid rgba(155, 189, 227, 0.354);
+  box-shadow: 0 5px 10px 0 rgba(0, 0, 0, 1);
+}
+
 .slider-container {
   position: relative;
   width: 400px;
@@ -46,4 +51,12 @@ ul li{
   background: red;
   cursor: pointer;
   opacity: 80%;
+}
+
+.topbar {
+  @apply fixed top-0 z-30 flex w-full items-center justify-between bg-dark-2 bg-opacity-70 px-6 py-3;
+}
+
+.btn {
+  @apply rounded-3xl bg-primary-500 px-8 py-2 !text-small-regular text-light-1 max-xs:w-full !important;
 }

@@ -4,25 +4,8 @@ import { Canvas, useFrame, useLoader, useThree } from '@react-three/fiber'
 import React, { useEffect, useRef, useState } from 'react'
 import * as THREE from 'three';
 import { gsap } from 'gsap';
-import SyncImage from 'public/sync.png';
-import Image from 'next/image';
-
-
-const dummyData = [
-    {
-        lat: 37.5518911,
-        lon: 126.9917937,
-        radius: 2.2
-    },{
-      lat: 25.451233,
-      lon: 28.111223,
-      radius: 2.2
-    },{
-      lat: 0,
-      lon: 35,
-      radius: 2.2
-    }
-    ]    
+import axios from 'axios';
+import { useRouter } from 'next/navigation';
 
 const Light = () => {
   const spotLightRef = useRef<THREE.SpotLight | null>(null!);
@@ -74,108 +57,12 @@ interface PinProps {
   lat: number;
   lon: number;
   radius: number;
+  country: string;
+  year: string;
 }
-
-const Pin: React.FC<PinProps> = (props) => {
-  const groupRef = useRef<THREE.Group>(null!);
-  const meshRef = useRef<THREE.Mesh>(null!);
-  const sphereRef = useRef<THREE.Mesh>(null!);
-  const plateRef = useRef<THREE.Mesh>(null!);
-  const { camera } = useThree();
-
-  useEffect(() => {
-    if (typeof props.radius === 'number') {
-      const position = EarthlatLongToVector3(props.lat, props.lon, props.radius);
-      if (groupRef.current) {
-        groupRef.current.position.copy(position);
-        groupRef.current.lookAt(new THREE.Vector3(0,0,0));
-      }
-      if (meshRef.current) {
-        meshRef.current.rotation.x = 0.2;
-        meshRef.current.rotation.y = 1.54;
-        meshRef.current.rotation.z = 1.38; 
-      }
-      if (sphereRef.current) {
-        sphereRef.current.position.x = 0;
-        sphereRef.current.position.y = 0;
-        sphereRef.current.position.z = -0.12; 
-      }
-    }
-  }, [props.lat, props.lon, props.radius]);
-
-  useEffect(() => {
-    if (plateRef.current) {
-      plateRef.current.rotation.x = 3.14;
-    }
-  })
-
-  const onPinClick = () => {
-    zoomInToLocation(props.lat, props.lon);
-  }
-
-const zoomInToLocation = (lat:any, lon:any) => {
-  // 클릭한 지점으로 이동할 카메라 위치 계산
-  const intermediatePosition = EarthlatLongToVector3(lat, lon, 5); // 예시 값, 지구 표면에서 높은 위치
-  // 최종 목적지 위치 계산
-  const finalPosition = EarthlatLongToVector3(lat, lon, 2.3); // 지구 표면에서 약간 떨어진 위치
-
-
-  // 클릭한 지점으로 빠르게 이동
-  gsap.to(camera.position, {
-    x: intermediatePosition.x,
-    y: intermediatePosition.y,
-    z: intermediatePosition.z,
-    duration: 0.6, // 빠른 이동
-    ease: "power2.inOut",
-    onUpdate: () => camera.lookAt(new THREE.Vector3(0, 0, 0)),
-    onComplete: () => {
-      // 천천히 최종 목적지로 줌인
-      gsap.to(camera.position, {
-        x: finalPosition.x,
-        y: finalPosition.y,
-        z: finalPosition.z,
-        duration: 1.5, // 천천히 이동
-        ease: "power2.inOut",
-        onUpdate: () => camera.lookAt(new THREE.Vector3(0, 0, 0)),
-        onComplete: () => {
-          try{
-            window.location.href =`/earth/detail?lat=${lat}&lon=${lon}`;
-          } catch (error) {
-            console.log("이동실패", error);
-            setTimeout(() => {
-              gsap.to(camera.position, {
-                x: intermediatePosition.x,
-                y: intermediatePosition.y,
-                z: intermediatePosition.z,
-                duration: 1.5, // 천천히 이동
-              });
-          }, 1000);
-        }
-      }
-    });
-  }});
-};
-
-return (
-  <group ref={groupRef}>
-    {/* 몸통 */}
-    <mesh ref={meshRef} onClick={onPinClick}>
-      <coneGeometry args={[0.05, 0.15]} />
-      <meshBasicMaterial color="red" />       
-    </mesh>
-    {/* 머리 */}
-    <mesh ref={sphereRef}>
-      <sphereGeometry args={[0.04]}/>
-      <meshBasicMaterial color="blue" />
-    </mesh>
-  </group>
-);
-};
-
 
 const Earth = () => {
   const model = useGLTF('/earth/scene.gltf');
-  const camera = useThree((state) => state.camera);
 
   return (
     <mesh receiveShadow castShadow>
@@ -212,8 +99,136 @@ const Cloud = () => {
     </mesh>
   )};
 
+interface DisasterData {
+  dLatitude: number ;
+  dLongitude: number;
+  dCountry: string;
+  dDate: string;
+}
+
 export const EarthCanvas = () => {
+  // 카메라 옮기기
   const [reasetCamera, setResetCamera] = useState(false);
+  const [disasterData, setDisasterData] = useState<DisasterData[]>([]);
+  const router = useRouter();
+
+  useEffect(() => {
+    getDisaster();
+  },[])
+
+  async function getDisaster() {
+    try{
+      const response = await axios.get('http://3.37.123.46/disasters/archive');
+      const updatedData = response.data.map((data:any) => {
+      setDisasterData(updatedData);
+      console.log(updatedData);
+      });
+    }catch (error) {
+      console.log("데이터 가져오기 실패");
+      console.log(error);
+    }
+  }
+
+  const Pin: React.FC<PinProps> = (props) => {
+    const groupRef = useRef<THREE.Group>(null!);
+    const meshRef = useRef<THREE.Mesh>(null!);
+    const sphereRef = useRef<THREE.Mesh>(null!);
+    const plateRef = useRef<THREE.Mesh>(null!);
+    const { camera } = useThree();
+    const country = props.country;
+    const year = props.year.toString().split('-')[0];
+
+    useEffect(() => {
+      if (typeof props.radius === 'number') {
+        const position = EarthlatLongToVector3(props.lat, props.lon, props.radius);
+        if (groupRef.current) {
+          groupRef.current.position.copy(position);
+          groupRef.current.lookAt(new THREE.Vector3(0,0,0));
+        }
+        if (meshRef.current) {
+          meshRef.current.rotation.x = 0.2;
+          meshRef.current.rotation.y = 1.54;
+          meshRef.current.rotation.z = 1.38; 
+        }
+        if (sphereRef.current) {
+          sphereRef.current.position.x = 0;
+          sphereRef.current.position.y = 0;
+          sphereRef.current.position.z = -0.12; 
+        }
+      }
+    }, [props.lat, props.lon, props.radius]);
+  
+    useEffect(() => {
+      if (plateRef.current) {
+        plateRef.current.rotation.x = 3.14;
+      }
+    })
+  
+    const onPinClick = () => {
+      if (country && year) {
+        zoomInToLocation(props.lat, props.lon, router);
+      } else {
+        console.error("Country or year is undefined");
+      }
+    };
+  
+  const zoomInToLocation = (lat:number|string, lon:number|string, router:any) => {
+    // 클릭한 지점으로 이동할 카메라 위치 계산
+    const intermediatePosition = EarthlatLongToVector3(lat, lon, 5); // 예시 값, 지구 표면에서 높은 위치
+    // 최종 목적지 위치 계산
+    const finalPosition = EarthlatLongToVector3(lat, lon, 2.3); // 지구 표면에서 약간 떨어진 위치
+  
+    // 클릭한 지점으로 빠르게 이동
+    gsap.to(camera.position, {
+      x: intermediatePosition.x,
+      y: intermediatePosition.y,
+      z: intermediatePosition.z,
+      duration: 0.6, // 빠른 이동
+      ease: "power2.inOut",
+      onUpdate: () => camera.lookAt(new THREE.Vector3(0, 0, 0)),
+      onComplete: () => {
+        // 천천히 최종 목적지로 줌인
+        gsap.to(camera.position, {
+          x: finalPosition.x,
+          y: finalPosition.y,
+          z: finalPosition.z,
+          duration: 1.5, // 천천히 이동
+          ease: "power2.inOut",
+          onUpdate: () => camera.lookAt(new THREE.Vector3(0, 0, 0)),
+          onComplete: () => {
+            try{
+              router.push(`http://localhost:3000/detail/${country}`);
+            } catch (error) {
+              console.log("이동실패", error);
+              setTimeout(() => {
+                gsap.to(camera.position, {
+                  x: intermediatePosition.x,
+                  y: intermediatePosition.y,
+                  z: intermediatePosition.z,
+                  duration: 1.5, // 천천히 이동
+                });
+            }, 1000);
+          }
+        }
+      });
+    }});
+  };
+  
+  return (
+    <group ref={groupRef}>
+      {/* 몸통 */}
+      <mesh ref={meshRef} onClick={onPinClick}>
+        <coneGeometry args={[0.05, 0.15]} />
+        <meshBasicMaterial color="red" />       
+      </mesh>
+      {/* 머리 */}
+      <mesh ref={sphereRef}>
+        <sphereGeometry args={[0.04]}/>
+        <meshBasicMaterial color="blue" />
+      </mesh>
+    </group>
+  );
+  };
 
   return (
     <>
@@ -223,6 +238,9 @@ export const EarthCanvas = () => {
           enablePan={false}
           minPolarAngle={0.5}
           maxPolarAngle={2}
+          minDistance={2.7} 
+          maxDistance={5}
+
         />
         <Light />
         <Stars 
@@ -235,11 +253,11 @@ export const EarthCanvas = () => {
         <Earth />
         <Cloud />
         <Atmosphere /> 
-        {dummyData.map((data, index) => {
-          console.log(index);
+        {disasterData.map((data, index) => {
+          if (data.dLatitude !== undefined && data.dLongitude !== undefined && data.dCountry!==undefined && data.dDate!==undefined){
           return(
-            <Pin key={index} lat={data.lat} lon={data.lon} radius={data.radius}/>
-          )
+            <Pin key={index} lat={data.dLatitude} lon={data.dLongitude} radius={2.2} country={data.dCountry} year={data.dDate}/>
+          )}
         })}
       </Canvas>
     </>
